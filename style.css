@@ -59,12 +59,15 @@ canvas {
     -webkit-backdrop-filter: blur(8px);
     border: 1px solid rgba(255, 255, 255, 0.18);
     border-radius: 20px;
-    padding: 40px;
+    padding: 28px 24px;
     text-align: center;
     box-shadow: var(--glass-shadow);
     pointer-events: auto;
     transition: all 0.3s ease;
     z-index: 10;
+    width: min(92%, 560px);
+    max-height: calc(100% - 24px);
+    overflow: hidden;
 }
 
 .hidden {
@@ -74,23 +77,106 @@ canvas {
 }
 
 h1 {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
+    font-size: clamp(1.8rem, 4.2vw, 2.5rem);
+    margin-bottom: 0.6rem;
     background: linear-gradient(to right, #ff416c, #ff4b2b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
 }
 
 p {
-    margin-bottom: 1.5rem;
-    font-size: 1.1rem;
-    line-height: 1.6;
+    margin-bottom: 0.9rem;
+    font-size: 1rem;
+    line-height: 1.45;
+}
+
+#start-screen {
+    width: min(92%, 520px);
+    height: calc(100% - 24px);
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+}
+
+#start-screen h1 {
+    margin-bottom: 2px;
+}
+
+#start-screen p {
+    margin-bottom: 2px;
+}
+
+.sensitivity-label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 3px;
+}
+
+#sensitivity-slider {
+    width: 260px;
+    max-width: 100%;
+    margin-bottom: 3px;
+}
+
+#mic-test-panel {
+    margin-bottom: 4px;
+}
+
+#mic-test-btn {
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+#mic-test-meter-container {
+    width: 260px;
+    max-width: 100%;
+    height: 10px;
+    margin: 0 auto 4px;
+    background: rgba(0, 0, 0, 0.15);
+    border-radius: 999px;
+    overflow: hidden;
+}
+
+#mic-test-meter {
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(to right, #34d399, #22d3ee);
+    transition: width 0.08s linear;
+}
+
+#jump-preview-wrap {
+    position: relative;
+    width: 260px;
+    height: 44px;
+    margin: 0 auto;
+}
+
+#jump-preview-chicken {
+    position: absolute;
+    left: 50%;
+    bottom: 5px;
+    transform: translateX(-50%) translateY(0);
+    font-size: 28px;
+    transition: transform 0.09s ease-out;
+}
+
+#jump-preview-ground {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 2px;
+    height: 5px;
+    border-radius: 6px;
+    background: rgba(0, 0, 0, 0.25);
 }
 
 .hint {
     color: #ff6b6b;
     font-weight: bold;
-    font-size: 0.9rem;
+    font-size: 0.84rem;
 }
 
 .location {
@@ -103,8 +189,8 @@ button {
     background: linear-gradient(to right, #ff416c, #ff4b2b);
     color: white;
     border: none;
-    padding: 12px 30px;
-    font-size: 1.1rem;
+    padding: 9px 22px;
+    font-size: 0.95rem;
     font-weight: 700;
     border-radius: 12px;
     cursor: pointer;
@@ -127,7 +213,8 @@ button:active {
     left: 20px;
     right: 20px;
     display: flex;
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 12px;
     align-items: center;
     pointer-events: none;
     z-index: 5;
@@ -141,6 +228,48 @@ button:active {
     background: rgba(0, 0, 0, 0.3);
     padding: 8px 16px;
     border-radius: 12px;
+    min-width: 170px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+#time-display {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 16px;
+    border-radius: 12px;
+    min-width: 145px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}
+
+#sensitivity-hud {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: space-between;
+    color: #fff;
+    font-weight: 700;
+    background: rgba(0, 0, 0, 0.3);
+    padding: 8px 12px;
+    border-radius: 12px;
+    pointer-events: auto;
+    min-width: 340px;
+}
+
+#sensitivity-slider-hud {
+    width: 160px;
+    flex: 0 0 160px;
+}
+
+#sensitivity-value-hud {
+    display: inline-block;
+    width: 4ch;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
 }
 
 #volume-meter-container {
@@ -150,6 +279,7 @@ button:active {
     border-radius: 6px;
     overflow: hidden;
     backdrop-filter: blur(4px);
+    margin-left: auto;
 }
 
 #volume-meter {
@@ -157,4 +287,26 @@ button:active {
     height: 100%;
     background: linear-gradient(to right, #4facfe 0%, #00f2fe 100%);
     transition: width 0.1s ease-out;
+}
+
+@media (max-height: 560px) {
+    .screen {
+        padding: 14px 14px;
+        border-radius: 14px;
+    }
+
+    .hint {
+        font-size: 0.76rem;
+    }
+
+    #sensitivity-slider,
+    #mic-test-meter-container,
+    #jump-preview-wrap {
+        width: 210px;
+    }
+
+    #start-screen {
+        gap: 4px;
+        padding: 12px;
+    }
 }

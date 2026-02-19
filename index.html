@@ -19,8 +19,23 @@
             <div id="start-screen" class="screen">
                 <h1>소리 질러! 닭 점프!</h1>
                 <p>마이크를 사용해 소리를 지르면 닭이 점프합니다.</p>
-                <p class="location">장소: 에듀테크소프트랩</p>
                 <p class="hint">소리가 클수록 더 높이 뜁니다!</p>
+                <label for="sensitivity-slider" class="sensitivity-label">점프 민감도</label>
+                <input id="sensitivity-slider" type="range" min="0.05" max="0.5" step="0.01" value="0.18">
+                <p id="sensitivity-value" class="hint">민감도: 0.18</p>
+
+                <div id="mic-test-panel">
+                    <button id="mic-test-btn" type="button">마이크 테스트 시작</button>
+                    <div id="mic-test-meter-container">
+                        <div id="mic-test-meter"></div>
+                    </div>
+                    <p id="jump-preview-text" class="hint">예상 점프력: 0%</p>
+                    <div id="jump-preview-wrap">
+                        <div id="jump-preview-chicken">🐔</div>
+                        <div id="jump-preview-ground"></div>
+                    </div>
+                </div>
+
                 <button id="start-btn">게임 시작</button>
             </div>
 
@@ -31,7 +46,13 @@
             </div>
 
             <div id="hud" class="hidden">
-                <div id="score-display">Score: 0</div>
+                <div id="score-display">점수: 0</div>
+                <div id="time-display">시간: 0.0초</div>
+                <div id="sensitivity-hud">
+                    <span>민감도</span>
+                    <input id="sensitivity-slider-hud" type="range" min="0.05" max="0.5" step="0.01" value="0.18">
+                    <span id="sensitivity-value-hud">0.18</span>
+                </div>
                 <div id="volume-meter-container">
                     <div id="volume-meter"></div>
                 </div>

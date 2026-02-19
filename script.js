@@ -6,8 +6,8 @@ const GRAVITY = 0.5;
 const GROUND_Y = 400;
 const CHICKEN_X = 100;
 const INITIAL_SPEED = 5;
-const JUMP_FORCE_MULTIPLIER = 20;
-const MIN_SENSITIVITY = 0.1;
+const JUMP_FORCE_MULTIPLIER = 35;
+const DEFAULT_SENSITIVITY = 0.18;
 
 // Game state
 let score = 0;
@@ -15,9 +15,15 @@ let gameActive = false;
 let speed = INITIAL_SPEED;
 let obstacles = [];
 let nextObstacleTimer = 0;
+let obstacleBurst = 0;
 let animationId;
 let clouds = [];
 let particles = [];
+let gameStartTime = 0;
+let elapsedSeconds = 0;
+let sensitivityThreshold = DEFAULT_SENSITIVITY;
+let previewAnimationId;
+let micTestActive = false;
 
 // Audio variables
 let audioContext;
@@ -35,6 +41,9 @@ const chicken = {
     vy: 0,
     isJumping: false,
     mouthOpen: 0,
+    jumpsRemaining: 2,
+    jumpReady: true,
+    isFallingIntoHole: false,
 
     draw() {
         ctx.save();
@@ -98,21 +107,52 @@ const chicken = {
     update() {
         this.y += this.vy;
 
+        // If already falling into a hole, just keep falling
+        if (this.isFallingIntoHole) {
+            this.vy += GRAVITY;
+            if (this.y > canvas.height) {
+                endGame();
+            }
+            return;
+        }
+
+        // Check if chicken is over a hole
+        let overHole = false;
+        for (let obs of obstacles) {
+            if (obs.type === 'hole' &&
+                this.x + this.width / 2 > obs.x &&
+                this.x + this.width / 2 < obs.x + obs.width) {
+                overHole = true;
+                break;
+            }
+        }
+
         if (this.y < GROUND_Y - this.height) {
             this.vy += GRAVITY;
             this.isJumping = true;
-        } else {
+        } else if (!overHole) {
             this.y = GROUND_Y - this.height;
             this.vy = 0;
             this.isJumping = false;
+            this.jumpsRemaining = 2; // Reset jumps on ground
+        } else {
+            // Over hole and at/below ground level: fall!
+            this.isFallingIntoHole = true; // Set state so it can't escape
+            this.vy += GRAVITY;
+            this.isJumping = true;
         }
     },
 
     jump(volume) {
-        if (!this.isJumping) {
-            const force = Math.min(volume * JUMP_FORCE_MULTIPLIER, 22);
+        // Can't jump if already falling into a hole
+        if (this.isFallingIntoHole) return;
+
+        if (this.jumpsRemaining > 0 && this.jumpReady) {
+            const force = Math.min(volume * JUMP_FORCE_MULTIPLIER, 26);
             this.vy = -force;
             this.mouthOpen = volume;
+            this.jumpsRemaining--;
+            this.jumpReady = false; // Prevent continuous jump from one sound peak
             createJumpParticles();
         }
     }
@@ -149,17 +189,19 @@ class Obstacle {
     constructor(type) {
         this.x = canvas.width;
         this.type = type;
-        this.width = 50 + Math.random() * 30;
 
         if (type === 'block') {
-            this.height = 40 + Math.random() * 40;
+            this.width = 35 + Math.random() * 95;
+            this.height = 30 + Math.random() * 110;
             this.y = GROUND_Y - this.height;
             this.color = '#747d8c';
         } else {
             this.height = 100;
             this.y = GROUND_Y;
             this.color = '#000';
-            this.width = 80 + Math.random() * 40;
+            const holeScale = Math.min(1.6, 1 + (speed - INITIAL_SPEED) * 0.12);
+            const rawWidth = 40 + Math.random() * 120 * holeScale;
+            this.width = Math.min(rawWidth, 210);
         }
     }
 
@@ -196,8 +238,17 @@ const startScreen = document.getElementById('start-screen');
 const gameOverScreen = document.getElementById('game-over-screen');
 const hud = document.getElementById('hud');
 const scoreDisplay = document.getElementById('score-display');
+const timeDisplay = document.getElementById('time-display');
 const volumeMeter = document.getElementById('volume-meter');
 const finalScore = document.getElementById('final-score');
+const sensitivitySlider = document.getElementById('sensitivity-slider');
+const sensitivityValue = document.getElementById('sensitivity-value');
+const sensitivitySliderHud = document.getElementById('sensitivity-slider-hud');
+const sensitivityValueHud = document.getElementById('sensitivity-value-hud');
+const micTestBtn = document.getElementById('mic-test-btn');
+const micTestMeter = document.getElementById('mic-test-meter');
+const jumpPreviewText = document.getElementById('jump-preview-text');
+const jumpPreviewChicken = document.getElementById('jump-preview-chicken');
 
 async function initAudio() {
     try {
@@ -222,7 +273,7 @@ function updateVolume() {
         values += dataArray[i];
     }
     const average = values / dataArray.length;
-    return Math.min(average / 100, 1.5);
+    return Math.min(average / 60, 1.5);
 }
 
 function handleJump() {
@@ -230,8 +281,10 @@ function handleJump() {
     const meterWidth = Math.min(currentVolume * 100, 100);
     volumeMeter.style.width = `${meterWidth}%`;
 
-    if (currentVolume > MIN_SENSITIVITY) {
+    if (currentVolume > sensitivityThreshold) {
         chicken.jump(currentVolume);
+    } else {
+        chicken.jumpReady = true; // Reset ready when volume drops
     }
 }
 
@@ -267,9 +320,24 @@ function drawClouds() {
 
 function spawnObstacle() {
     if (nextObstacleTimer <= 0) {
-        const type = Math.random() > 0.4 ? 'block' : 'hole';
+        const holeChance = Math.min(0.5, 0.25 + (speed - INITIAL_SPEED) * 0.03);
+        const type = Math.random() < holeChance ? 'hole' : 'block';
         obstacles.push(new Obstacle(type));
-        nextObstacleTimer = 80 + Math.random() * 100;
+
+        if (Math.random() < 0.22) {
+            obstacleBurst = 1 + Math.floor(Math.random() * 2);
+            nextObstacleTimer = 18 + Math.random() * 24;
+        } else {
+            obstacleBurst = 0;
+            const minGap = Math.max(34, 82 - speed * 4.5);
+            const maxGap = Math.max(minGap + 10, 150 - speed * 3.5);
+            nextObstacleTimer = minGap + Math.random() * (maxGap - minGap);
+        }
+    } else if (obstacleBurst > 0 && nextObstacleTimer <= 1) {
+        const type = Math.random() < 0.5 ? 'hole' : 'block';
+        obstacles.push(new Obstacle(type));
+        obstacleBurst--;
+        nextObstacleTimer = obstacleBurst > 0 ? 20 + Math.random() * 28 : 48 + Math.random() * 40;
     }
     nextObstacleTimer--;
 }
@@ -284,11 +352,7 @@ function checkCollision() {
                 endGame();
             }
         } else {
-            if (chicken.x + chicken.width / 2 > obs.x &&
-                chicken.x + chicken.width / 2 < obs.x + obs.width &&
-                chicken.y + chicken.height > GROUND_Y + 5) {
-                endGame();
-            }
+            // Hole collision logic moved to chicken.update for falling effect
         }
     }
 }
@@ -312,6 +376,10 @@ function drawBackground() {
 
 function update() {
     if (!gameActive) return;
+    elapsedSeconds = (performance.now() - gameStartTime) / 1000;
+    score = Math.floor(elapsedSeconds * 14);
+    scoreDisplay.textContent = `점수: ${score}`;
+    timeDisplay.textContent = `시간: ${elapsedSeconds.toFixed(1)}초`;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -336,8 +404,6 @@ function update() {
         obs.draw();
         if (obs.x + obs.width < 0) {
             obstacles.splice(index, 1);
-            score++;
-            scoreDisplay.textContent = `Score: ${score}`;
             speed += 0.05;
         }
     });
@@ -357,10 +423,17 @@ function startGame() {
     clouds = [];
     particles = [];
     nextObstacleTimer = 0;
-    scoreDisplay.textContent = `Score: 0`;
+    obstacleBurst = 0;
+    gameStartTime = performance.now();
+    elapsedSeconds = 0;
+    scoreDisplay.textContent = `점수: 0`;
+    timeDisplay.textContent = `시간: 0.0초`;
     chicken.y = GROUND_Y - chicken.height;
     chicken.vy = 0;
     chicken.mouthOpen = 0;
+    chicken.jumpsRemaining = 2;
+    chicken.jumpReady = true;
+    chicken.isFallingIntoHole = false;
 
     gameActive = true;
     startScreen.classList.add('hidden');
@@ -374,12 +447,64 @@ function endGame() {
     gameActive = false;
     cancelAnimationFrame(animationId);
     gameOverScreen.classList.remove('hidden');
-    finalScore.textContent = `최종 점수: ${score}`;
+    finalScore.textContent = `최종 점수: ${score} (생존 ${elapsedSeconds.toFixed(1)}초)`;
     hud.classList.add('hidden');
 }
 
 startBtn.addEventListener('click', startGame);
 restartBtn.addEventListener('click', startGame);
+
+function updateSensitivity(nextValue) {
+    const value = Number(nextValue);
+    sensitivityThreshold = value;
+    sensitivitySlider.value = value.toFixed(2);
+    sensitivitySliderHud.value = value.toFixed(2);
+    sensitivityValue.textContent = `민감도: ${value.toFixed(2)}`;
+    sensitivityValueHud.textContent = value.toFixed(2);
+}
+
+async function startMicTest() {
+    if (!audioContext) {
+        await initAudio();
+    }
+    if (!analyser) {
+        jumpPreviewText.textContent = '마이크 접근 실패: 권한을 확인하세요.';
+        return;
+    }
+
+    micTestActive = true;
+    micTestBtn.textContent = '테스트 중...';
+
+    if (!previewAnimationId) {
+        runMicPreviewLoop();
+    }
+}
+
+function runMicPreviewLoop() {
+    if (!micTestActive || gameActive) {
+        previewAnimationId = null;
+        return;
+    }
+
+    const volume = updateVolume();
+    const meterWidth = Math.min(volume * 100, 100);
+    micTestMeter.style.width = `${meterWidth}%`;
+
+    const jumpForce = Math.min(volume * JUMP_FORCE_MULTIPLIER, 26);
+    const jumpPercent = Math.round((jumpForce / 26) * 100);
+    jumpPreviewText.textContent = `예상 점프력: ${jumpPercent}%`;
+
+    const activeJump = volume > sensitivityThreshold ? jumpForce : 0;
+    const jumpHeight = Math.min(52, activeJump * 2);
+    jumpPreviewChicken.style.transform = `translateX(-50%) translateY(${-jumpHeight}px)`;
+
+    previewAnimationId = requestAnimationFrame(runMicPreviewLoop);
+}
+
+sensitivitySlider.addEventListener('input', (event) => updateSensitivity(event.target.value));
+sensitivitySliderHud.addEventListener('input', (event) => updateSensitivity(event.target.value));
+micTestBtn.addEventListener('click', startMicTest);
+updateSensitivity(DEFAULT_SENSITIVITY);
 
 function resize() {
     const container = document.getElementById('game-container');
