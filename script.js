@@ -116,14 +116,21 @@ const chicken = {
             return;
         }
 
-        // Check if chicken is over a hole
+        // Check if chicken is over a hole (using a wider threshold for better feel)
         let overHole = false;
+        const chickenEdgeLeft = this.x + 10; // 10px from left
+        const chickenEdgeRight = this.x + this.width - 10; // 10px from right
+
         for (let obs of obstacles) {
-            if (obs.type === 'hole' &&
-                this.x + this.width / 2 > obs.x &&
-                this.x + this.width / 2 < obs.x + obs.width) {
-                overHole = true;
-                break;
+            if (obs.type === 'hole') {
+                const holeLeft = obs.x;
+                const holeRight = obs.x + obs.width;
+
+                // If most of the chicken is over the hole
+                if (chickenEdgeLeft > holeLeft && chickenEdgeRight < holeRight) {
+                    overHole = true;
+                    break;
+                }
             }
         }
 
@@ -389,7 +396,6 @@ function update() {
 
     handleJump();
     chicken.update();
-    chicken.draw();
 
     particles.forEach((p, i) => {
         p.update();
@@ -407,6 +413,9 @@ function update() {
             speed += 0.05;
         }
     });
+
+    // Draw chicken AFTER obstacles so it's visible while falling into holes
+    chicken.draw();
 
     checkCollision();
 
