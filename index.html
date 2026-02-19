@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>비명 지르는 닭 - Screaming Chicken</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="ui-overlay">
+            <div id="start-screen" class="screen">
+                <h1>소리 질러! 닭 점프!</h1>
+                <p>마이크를 사용해 소리를 지르면 닭이 점프합니다.</p>
+                <p class="hint">소리가 클수록 더 높이 뜁니다!</p>
+                <button id="start-btn">게임 시작</button>
+            </div>
+
+            <div id="game-over-screen" class="screen hidden">
+                <h2>게임 오버</h2>
+                <p id="final-score">점수: 0</p>
+                <button id="restart-btn">다시 도전</button>
+            </div>
+
+            <div id="hud" class="hidden">
+                <div id="score-display">Score: 0</div>
+                <div id="volume-meter-container">
+                    <div id="volume-meter"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+
+</html>
