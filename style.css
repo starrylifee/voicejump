@@ -93,6 +93,12 @@ p {
     font-size: 0.9rem;
 }
 
+.location {
+    font-size: 0.9rem;
+    color: #636e72;
+    margin-top: -10px;
+}
+
 button {
     background: linear-gradient(to right, #ff416c, #ff4b2b);
     color: white;
